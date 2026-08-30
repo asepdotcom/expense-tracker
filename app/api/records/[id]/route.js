@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params; // params is a Promise in Next.js 15+
     const body = await request.json();
     const date = body.date;
     const title = (body.title || "").trim();
@@ -39,19 +39,15 @@ export async function PUT(request, { params }) {
     }
 
     // Replace items: delete old ones then insert new ones
-    const { error: delError } = await getSupabaseAdmin()
-      .from("items")
-      .delete()
-      .eq("record_id", id);
-
-    if (delError) {
-      return NextResponse.json({ error: delError.message }, { status: 500 });
+    const delRes = await getSupabaseAdmin().from("items").delete().eq("record_id", id);
+    if (delRes.error) {
+      return NextResponse.json({ error: delRes.error.message }, { status: 500 });
     }
 
     const rows = cleanItems.map((it) => ({ record_id: id, description: it.description, amount: it.amount }));
-    const { error: insError } = await getSupabaseAdmin().from("items").insert(rows);
-    if (insError) {
-      return NextResponse.json({ error: insError.message }, { status: 500 });
+    const insRes = await getSupabaseAdmin().from("items").insert(rows);
+    if (insRes.error) {
+      return NextResponse.json({ error: insRes.error.message }, { status: 500 });
     }
 
     return NextResponse.json({ record });
@@ -62,7 +58,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params; // params is a Promise in Next.js 15+
 
     // Deleting items first (FK constraint), then the record.
     await getSupabaseAdmin().from("items").delete().eq("record_id", id);

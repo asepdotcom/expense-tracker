@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 const currency = (n) =>
-  new Intl.NumberFormat("en-US", {
+  new Intl.NumberFormat("id-ID", {
     style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(n || 0);
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
