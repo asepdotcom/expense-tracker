@@ -6,6 +6,7 @@ export async function PUT(request, { params }) {
     const { id } = await params; // params is a Promise in Next.js 15+
     const body = await request.json();
     const date = body.date;
+    const category = String(body.category || "Other").trim() || "Other";
     const title = (body.title || "").trim();
     const items = Array.isArray(body.items) ? body.items : [];
 
@@ -29,7 +30,7 @@ export async function PUT(request, { params }) {
     // Update record fields
     const { data: record, error: recordError } = await getSupabaseAdmin()
       .from("records")
-      .update({ date, title, total, updated_at: new Date().toISOString() })
+      .update({ date, category, title, total, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select("*")
       .single();
@@ -72,3 +73,4 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
+

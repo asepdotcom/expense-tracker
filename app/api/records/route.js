@@ -28,6 +28,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const date = body.date;
+    const category = String(body.category || "Other").trim() || "Other";
     const title = (body.title || "").trim();
     const items = Array.isArray(body.items) ? body.items : [];
 
@@ -51,7 +52,7 @@ export async function POST(request) {
     // Insert record
     const { data: record, error: recordError } = await getSupabaseAdmin()
       .from("records")
-      .insert({ date, title, total })
+      .insert({ date, category, title, total })
       .select("*")
       .single();
 
@@ -74,3 +75,33 @@ export async function POST(request) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const body = await request.json();
+    const ids = Array.isArray(body?.ids) ? body.ids.map(Number).filter(Number.isFinite) : [];
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "No records selected to delete" }, { status: 400 });
+    }
+
+    // Delete items for the selected records (cascades anyway via FK,
+    // but explicit delete keeps it clear), then the records themselves.
+    await getSupabaseAdmin().from("items").delete().in("record_id", ids);
+
+    const { data: deleted, error } = await getSupabaseAdmin()
+      .from("records")
+      .delete()
+      .in("id", ids)
+      .select("id");
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, deleted: deleted ?? [] });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+

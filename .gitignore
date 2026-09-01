@@ -9,3 +9,11 @@ out/
 next-env.d.ts
 .vercel
 .env*
+# WhatsApp bot session/auth
+whatsapp/auth_info/
+whatsapp/.env
+# The WhatsApp bot is a separate long-running deployment (not on Vercel/this repo)
+whatsapp/
+# Internal dev instructions / notes not meant for the public repo
+claude.md
+
