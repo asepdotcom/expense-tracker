@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
-export async function GET() {
+export async function GET(request) {
   try {
-    // Fetch records with their items, ordered by date descending.
-    const { data: records, error } = await getSupabaseAdmin()
+    // Optional date-range filter: ?from=YYYY-MM-DD&to=YYYY-MM-DD
+    const { searchParams } = new URL(request.url);
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    // Build the query dynamically when a range is provided.
+    let query = getSupabaseAdmin()
       .from("records")
-      .select("*, items(*)")
-      .order("date", { ascending: false });
+      .select("*, items(*)");
+
+    if (from) query = query.gte("date", from);
+    if (to) query = query.lte("date", to);
+
+    query = query.order("date", { ascending: false });
+
+    const { data: records, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     // Sort items by id (stable order within each record)
-    records.forEach((r) => {
+    (records ?? []).forEach((r) => {
       if (r.items) r.items.sort((a, b) => a.id - b.id);
     });
 

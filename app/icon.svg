@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded-square app tile (brand green) -->
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+
+  <!-- clean white ascending trend line with nodes -->
+  <polyline
+    points="128,356 232,300 320,222 400,238 452,140"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="26"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- small white dots on the trend to hint at data points/records -->
+  <circle cx="128" cy="356" r="22" fill="#ffffff"/>
+  <circle cx="232" cy="300" r="22" fill="#ffffff"/>
+  <circle cx="320" cy="222" r="22" fill="#ffffff"/>
+  <circle cx="400" cy="238" r="22" fill="#ffffff"/>
+  <circle cx="452" cy="140" r="22" fill="#ffffff"/>
+</svg>
+

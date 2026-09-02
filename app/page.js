@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 
 const currency = (n) =>
   new Intl.NumberFormat("id-ID", {
@@ -11,6 +12,14 @@ const currency = (n) =>
   }).format(n || 0);
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// First day of the current month (local time), as YYYY-MM-DD.
+const startOfMonthISO = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-01`;
+};
 
 const DEFAULT_CATEGORIES = ["Other"];
 
@@ -28,6 +37,10 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleting, setDeleting] = useState(false);
 
+  // Date filter state: defaults to start of the current month, no end date.
+  const [startDate, setStartDate] = useState(() => startOfMonthISO());
+  const [endDate, setEndDate] = useState("");
+
   // Form state
   const [editingId, setEditingId] = useState(null);
   const [date, setDate] = useState(todayISO());
@@ -38,7 +51,11 @@ export default function Home() {
 
   const loadRecords = useCallback(async () => {
     try {
-      const res = await fetch("/api/records");
+      const params = new URLSearchParams();
+      if (startDate) params.set("from", startDate);
+      if (endDate) params.set("to", endDate);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`/api/records${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
       setRecords(data.records || []);
@@ -47,7 +64,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -228,10 +245,75 @@ export default function Home() {
     }
   };
 
+  // Total spending across the currently-visible (date-filtered) records.
+  const visibleTotal = records.reduce((s, r) => s + (parseFloat(r.total) || 0), 0);
+
+  // Clear any stale bulk selection and refetch when the date filter changes.
+  const applyDateFilter = (which, value) => {
+    setSelectedIds([]);
+    if (which === "start") setStartDate(value);
+    else setEndDate(value);
+  };
+
+  // Download the currently-visible records as an Excel file.
+  const exportExcel = () => {
+    if (records.length === 0) {
+      setError("Nothing to export for the current filter.");
+      return;
+    }
+    // Flatten one row per line-item, plus a second sheet-less simple table.
+    const rows = [];
+    records.forEach((r) => {
+      const its = r.items && r.items.length ? r.items : [null];
+      its.forEach((it) => {
+        rows.push({
+          Date: r.date || "",
+          Category: r.category || "Other",
+          Title: r.title || "Untitled",
+          Description: it ? it.description : "",
+          Amount: it ? parseFloat(it.amount) : "",
+          Total: parseFloat(r.total) || 0,
+        });
+      });
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Freeze the header row and add sensible column widths.
+    ws["!cols"] = [
+      { wch: 12 }, // Date
+      { wch: 18 }, // Category
+      { wch: 22 }, // Title
+      { wch: 32 }, // Description
+      { wch: 14 }, // Amount (as number)
+      { wch: 14 }, // Total
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Expenses");
+
+    const filterPart = [];
+    if (startDate) filterPart.push(`${startDate}`);
+    if (endDate) filterPart.push(`${endDate}`);
+    const stamp = filterPart.length
+      ? ` (${startDate || "…"} to ${endDate || "…"})`
+      : " (all dates)";
+    const fname = `expenses${stamp.replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  };
+
   return (
     <div className="container">
       <header className="top">
-        <h1>💸 Expense Tracker</h1>
+        <div className="brand">
+          <img
+            src="/logo.png"
+            alt="Expensetrax logo"
+            className="brand-logo"
+            width={64}
+            height={64}
+          />
+          <h1>💸 Expensetrax</h1>
+        </div>
         <p>Add items, group them by date, and save as one record.</p>
       </header>
 
@@ -346,6 +428,57 @@ export default function Home() {
 
       {/* Records list */}
       <div className="card">
+        {/* Filter + summary toolbar */}
+        <div className="toolbar">
+          <div className="filters">
+            <div className="filter-field">
+              <label>From</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => applyDateFilter("start", e.target.value)}
+                max={endDate || undefined}
+              />
+            </div>
+            <div className="filter-field">
+              <label>To</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => applyDateFilter("end", e.target.value)}
+                min={startDate || undefined}
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setSelectedIds([]);
+                  setStartDate("");
+                  setEndDate("");
+                }}
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+          <button type="button" className="btn btn-export" onClick={exportExcel}>
+            ⬇ Download Excel
+          </button>
+        </div>
+
+        <div className="summary">
+          <span className="summary-label">Total spending</span>
+          <span className="summary-total">{currency(visibleTotal)}</span>
+          <span className="summary-count">
+            {records.length} record{records.length === 1 ? "" : "s"}
+            {startDate && !endDate && ` · since ${startDate}`}
+            {startDate && endDate && ` · ${startDate} to ${endDate}`}
+            {!startDate && endDate && ` · until ${endDate}`}
+          </span>
+        </div>
+
         <div className="list-head">
           <h2>All records</h2>
           {!loading && records.length > 0 && (
@@ -374,7 +507,11 @@ export default function Home() {
         {loading ? (
           <p className="empty">Loading…</p>
         ) : records.length === 0 ? (
-          <p className="empty">No expenses yet. Add your first one above.</p>
+          <p className="empty">
+            {(startDate || endDate)
+              ? "No expenses match this date range."
+              : "No expenses yet. Add your first one above."}
+          </p>
         ) : (
           <div>
             {selectedIds.length > 0 && (
