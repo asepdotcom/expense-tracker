@@ -305,14 +305,7 @@ export default function Home() {
     <div className="container">
       <header className="top">
         <div className="brand">
-          <img
-            src="/logo.png"
-            alt="Expensetrax logo"
-            className="brand-logo"
-            width={64}
-            height={64}
-          />
-          <h1>💸 Expensetrax</h1>
+          <h1 className="brand-title">ExpenseTrax</h1>
         </div>
         <p>Add items, group them by date, and save as one record.</p>
       </header>
