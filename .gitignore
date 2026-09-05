@@ -16,4 +16,6 @@ whatsapp/.env
 whatsapp/
 # Internal dev instructions / notes not meant for the public repo
 claude.md
+# Oracle bot deployment runbook (contains infra/SSH notes, keep internal)
+oracle-bot-deploy.md
 
