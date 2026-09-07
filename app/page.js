@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import Analytics from "./components/Analytics";
 
 const currency = (n) =>
   new Intl.NumberFormat("id-ID", {
@@ -24,6 +25,7 @@ const startOfMonthISO = () => {
 const DEFAULT_CATEGORIES = ["Other"];
 
 export default function Home() {
+  const [tab, setTab] = useState("records");
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -310,6 +312,27 @@ export default function Home() {
         <p>Add items, group them by date, and save as one record.</p>
       </header>
 
+      <div className="tabs">
+        <button
+          type="button"
+          className={`tab-btn ${tab === "records" ? "active" : ""}`}
+          onClick={() => setTab("records")}
+        >
+          Records
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${tab === "analytics" ? "active" : ""}`}
+          onClick={() => setTab("analytics")}
+        >
+          Analytics
+        </button>
+      </div>
+
+      {tab === "analytics" ? (
+        <Analytics categories={categories} />
+      ) : (
+      <>
       {error && <div className="error-banner">{error}</div>}
 
       {/* Add / Edit form */}
@@ -552,6 +575,8 @@ export default function Home() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
